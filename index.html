@@ -4,13 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>港美股日內交易記錄系統</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Excel 導出庫 -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- 配置Tailwind -->
     <script>
         tailwind.config = {
             theme: {
@@ -33,310 +29,234 @@
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-darkBg dark:text-gray-200 min-h-screen">
+<div class="container mx-auto px-4 py-6 max-w-4xl">
 
-    <!-- 全域容器 -->
-    <div class="container mx-auto px-4 py-6 max-w-4xl">
-
-        <!-- 1. 登入註冊頁 -->
-        <div id="authPage" class="space-y-6">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-                <h2 class="text-2xl font-bold text-center mb-6">港美股日內交易記錄系統</h2>
-                <div class="space-y-4">
-                    <input type="email" id="email" placeholder="輸入Email" 
-                        class="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
-                    <input type="password" id="pwd" placeholder="輸入密碼" 
-                        class="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
-                    <button onclick="signIn()" class="w-full bg-primary text-white p-3 rounded-lg">登入</button>
-                    <button onclick="signUp()" class="w-full border border-primary text-primary p-3 rounded-lg">註冊</button>
-                </div>
+    <!-- 登入註冊 -->
+    <div id="authPage" class="space-y-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+            <h2 class="text-2xl font-bold text-center mb-6">港美股日內交易記錄系統</h2>
+            <div class="space-y-4">
+                <input type="email" id="email" placeholder="輸入Email" class="w-full p-3 border rounded-lg dark:bg-gray-700">
+                <input type="password" id="pwd" placeholder="輸入密碼" class="w-full p-3 border rounded-lg dark:bg-gray-700">
+                <button onclick="signIn()" class="w-full bg-primary text-white p-3 rounded-lg">登入</button>
+                <button onclick="signUp()" class="w-full border border-primary text-primary p-3 rounded-lg">註冊</button>
             </div>
-        </div>
-
-        <!-- 登入後主介面 -->
-        <div id="mainApp" class="page-hidden space-y-6">
-            <!-- 導航列 -->
-            <nav class="flex overflow-x-auto gap-4 border-b pb-2">
-                <button class="nav-item py-2 px-3 whitespace-nowrap nav-active" data-page="dashboard">儀表板</button>
-                <button class="nav-item py-2 px-3 whitespace-nowrap" data-page="addTrade">新增記錄</button>
-                <button class="nav-item py-2 px-3 whitespace-nowrap" data-page="tradeList">記錄列表</button>
-                <button class="nav-item py-2 px-3 whitespace-nowrap" data-page="feeSetting">手續費設定</button>
-                <button class="nav-item py-2 px-3 whitespace-nowrap" data-page="profile">個人設定</button>
-            </nav>
-
-            <!-- 2. 儀表板頁 -->
-            <div id="dashboardPage" class="page-content">
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
-                        <p class="text-gray-500">今日淨盈虧</p>
-                        <p class="text-2xl font-bold" id="todayNet">$0.00</p>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
-                        <p class="text-gray-500">本月累計</p>
-                        <p class="text-2xl font-bold" id="monthNet">$0.00</p>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
-                        <p class="text-gray-500">今日交易筆數</p>
-                        <p class="text-2xl font-bold" id="todayCount">0</p>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
-                        <p class="text-gray-500">勝率</p>
-                        <p class="text-2xl font-bold" id="winRate">0%</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 3. 新增 / 編輯交易記錄頁 -->
-            <div id="addTradePage" class="page-content page-hidden">
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
-                    <h3 class="text-xl font-bold mb-4" id="formTitle">新增交易記錄</h3>
-                    <input type="hidden" id="editId" value="">
-
-                    <!-- 券商模板選擇 -->
-                    <select id="brokerTemplate" class="w-full p-3 border rounded-lg dark:bg-gray-700 mb-4">
-                        <option value="default">系統預設模板</option>
-                        <option value="futu">富途牛牛</option>
-                        <option value="tiger">老虎證券</option>
-                        <option value="bridge">長橋證券</option>
-                        <option value="hsbc">滙豐銀行</option>
-                    </select>
-
-                    <div class="space-y-3">
-                        <select id="marketType" class="w-full p-3 border rounded-lg dark:bg-gray-700">
-                            <option value="HK">港股</option>
-                            <option value="US">美股</option>
-                        </select>
-                        <input type="date" id="tradeDate" class="w-full p-3 border rounded-lg dark:bg-gray-700">
-                        <input type="time" id="tradeTime" class="w-full p-3 border rounded-lg dark:bg-gray-700">
-                        <input type="text" id="stockCode" placeholder="股票代碼" class="w-full p-3 border rounded-lg dark:bg-gray-700">
-                        <input type="text" id="stockName" placeholder="股票名稱" class="w-full p-3 border rounded-lg dark:bg-gray-700">
-                        
-                        <div class="grid grid-cols-2 gap-3">
-                            <select id="direction" class="p-3 border rounded-lg dark:bg-gray-700">
-                                <option value="買入">買入</option>
-                                <option value="賣出">賣出</option>
-                            </select>
-                            <select id="positionType" class="p-3 border rounded-lg dark:bg-gray-700">
-                                <option value="開倉">開倉</option>
-                                <option value="平倉">平倉</option>
-                                <option value="加倉">加倉</option>
-                                <option value="減倉">減倉</option>
-                            </select>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-3">
-                            <input type="number" step="0.01" id="entryPrice" placeholder="入場價" class="p-3 border rounded-lg dark:bg-gray-700">
-                            <input type="number" step="0.01" id="exitPrice" placeholder="離場價" class="p-3 border rounded-lg dark:bg-gray-700">
-                            <input type="number" id="quantity" placeholder="股數/手數" class="p-3 border rounded-lg dark:bg-gray-700">
-                        </div>
-
-                        <!-- 三大標籤下拉 -->
-                        <div class="grid grid-cols-3 gap-3">
-                            <select id="strategyTag" class="p-3 border rounded-lg dark:bg-gray-700">
-                                <option value="">策略標籤</option>
-                                <option value="追漲">追漲</option>
-                                <option value="抄底">抄底</option>
-                                <option value="突破">突破</option>
-                                <option value="反手">反手</option>
-                                <option value="套利">套利</option>
-                                <option value="波段">波段</option>
-                                <option value="試單">試單</option>
-                            </select>
-                            <select id="emotionTag" class="p-3 border rounded-lg dark:bg-gray-700">
-                                <option value="">情緒標籤</option>
-                                <option value="冷靜操作">冷靜操作</option>
-                                <option value="衝動交易">衝動交易</option>
-                                <option value="報復交易">報復交易</option>
-                                <option value="過度自信">過度自信</option>
-                                <option value="聽消息交易">聽消息交易</option>
-                            </select>
-                            <select id="sectorTag" class="p-3 border rounded-lg dark:bg-gray-700">
-                                <option value="">板塊標籤</option>
-                                <option value="科技">科技</option>
-                                <option value="金融">金融</option>
-                                <option value="消費">消費</option>
-                                <option value="能源">能源</option>
-                                <option value="ETF">ETF</option>
-                                <option value="毛票">毛票</option>
-                            </select>
-                        </div>
-
-                        <!-- 實時計算結果展示 -->
-                        <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-700 text-sm space-y-1">
-                            <p>成交金額：<span id="amtVal">0.00</span></p>
-                            <p>總手續費：<span id="feeVal">0.00</span></p>
-                            <p>毛利：<span id="grossVal">0.00</span></p>
-                            <p class="font-bold">淨盈虧：<span id="netVal">0.00</span></p>
-                        </div>
-
-                        <textarea id="note" placeholder="備註、交易邏輯、情緒記錄" rows="3" class="w-full p-3 border rounded-lg dark:bg-gray-700"></textarea>
-                        <div class="grid grid-cols-2 gap-3">
-                            <button onclick="submitTrade()" class="w-full bg-primary text-white p-3 rounded-lg mt-2">保存</button>
-                            <button onclick="resetForm()" class="w-full bg-gray-400 text-white p-3 rounded-lg mt-2">重置</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 4. 記錄列表頁（含編輯、刪除、匯出Excel） -->
-            <div id="tradeListPage" class="page-content page-hidden">
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-bold">交易記錄列表</h3>
-                        <button onclick="exportToExcel()" class="bg-green-500 text-white px-4 py-2 rounded-lg text-sm">
-                            匯出 Excel
-                        </button>
-                    </div>
-                    <div id="tradeListContainer" class="space-y-3">
-                        <p class="text-gray-500">暫無交易記錄</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 5. 手續費設定頁 -->
-            <div id="feeSettingPage" class="page-content page-hidden">
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
-                    <h3 class="text-xl font-bold mb-4">券商手續費設定</h3>
-                    <select id="brokerTemplateSet" class="w-full p-3 border rounded-lg dark:bg-gray-700 mb-4">
-                        <option value="default">系統預設</option>
-                        <option value="futu">富途牛牛</option>
-                        <option value="tiger">老虎證券</option>
-                        <option value="bridge">長橋證券</option>
-                        <option value="hsbc">滙豐銀行</option>
-                    </select>
-                    <p class="text-gray-500 text-sm">選擇券商模板可一鍵套用費率，亦可手動自訂各項收費。</p>
-                </div>
-            </div>
-
-            <!-- 6. 個人設定頁 -->
-            <div id="profilePage" class="page-content page-hidden">
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow space-y-4">
-                    <h3 class="text-xl font-bold mb-4">個人設定</h3>
-                    <button onclick="signOut()" class="w-full bg-red-500 text-white p-3 rounded-lg">登出帳號</button>
-                </div>
-            </div>
-
         </div>
     </div>
 
+    <!-- 主應用 -->
+    <div id="mainApp" class="page-hidden space-y-6">
+        <nav class="flex overflow-x-auto gap-4 border-b pb-2">
+            <button class="nav-item py-2 px-3 whitespace-nowrap nav-active" data-page="dashboard">儀表板</button>
+            <button class="nav-item py-2 px-3 whitespace-nowrap" data-page="addTrade">新增記錄</button>
+            <button class="nav-item py-2 px-3 whitespace-nowrap" data-page="tradeList">記錄列表</button>
+            <button class="nav-item py-2 px-3 whitespace-nowrap" data-page="feeSetting">手續費設定</button>
+            <button class="nav-item py-2 px-3 whitespace-nowrap" data-page="profile">個人設定</button>
+        </nav>
+
+        <!-- 儀表板 -->
+        <div id="dashboardPage" class="page-content">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
+                    <p class="text-gray-500">今日淨盈虧</p>
+                    <p class="text-2xl font-bold" id="todayNet">$0.00</p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
+                    <p class="text-gray-500">本月累計</p>
+                    <p class="text-2xl font-bold" id="monthNet">$0.00</p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
+                    <p class="text-gray-500">今日交易筆數</p>
+                    <p class="text-2xl font-bold" id="todayCount">0</p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow">
+                    <p class="text-gray-500">勝率</p>
+                    <p class="text-2xl font-bold" id="winRate">0%</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新增 / 編輯 -->
+        <div id="addTradePage" class="page-content page-hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                <h3 class="text-xl font-bold mb-4" id="formTitle">新增交易記錄</h3>
+                <input type="hidden" id="editId" value="">
+                <select id="brokerTemplate" class="w-full p-3 border rounded-lg dark:bg-gray-700 mb-4">
+                    <option value="default">系統預設模板</option>
+                    <option value="futu">富途牛牛</option>
+                    <option value="tiger">老虎證券</option>
+                    <option value="bridge">長橋證券</option>
+                    <option value="hsbc">滙豐銀行</option>
+                </select>
+                <div class="space-y-3">
+                    <select id="marketType" class="w-full p-3 border rounded-lg dark:bg-gray-700">
+                        <option value="HK">港股</option><option value="US">美股</option>
+                    </select>
+                    <input type="date" id="tradeDate" class="w-full p-3 border rounded-lg dark:bg-gray-700">
+                    <input type="time" id="tradeTime" class="w-full p-3 border rounded-lg dark:bg-gray-700">
+                    <input type="text" id="stockCode" placeholder="股票代碼" class="w-full p-3 border rounded-lg dark:bg-gray-700">
+                    <input type="text" id="stockName" placeholder="股票名稱" class="w-full p-3 border rounded-lg dark:bg-gray-700">
+                    <div class="grid grid-cols-2 gap-3">
+                        <select id="direction" class="p-3 border rounded-lg dark:bg-gray-700">
+                            <option value="買入">買入</option><option value="賣出">賣出</option>
+                        </select>
+                        <select id="positionType" class="p-3 border rounded-lg dark:bg-gray-700">
+                            <option value="開倉">開倉</option><option value="平倉">平倉</option><option value="加倉">加倉</option><option value="減倉">減倉</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <input type="number" step="0.01" id="entryPrice" placeholder="入場價" class="p-3 border rounded-lg dark:bg-gray-700">
+                        <input type="number" step="0.01" id="exitPrice" placeholder="離場價" class="p-3 border rounded-lg dark:bg-gray-700">
+                        <input type="number" id="quantity" placeholder="股數/手數" class="p-3 border rounded-lg dark:bg-gray-700">
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <select id="strategyTag" class="p-3 border rounded-lg dark:bg-gray-700">
+                            <option value="">策略標籤</option><option value="追漲">追漲</option><option value="抄底">抄底</option><option value="突破">突破</option>
+                        </select>
+                        <select id="emotionTag" class="p-3 border rounded-lg dark:bg-gray-700">
+                            <option value="">情緒標籤</option><option value="冷靜操作">冷靜操作</option><option value="衝動交易">衝動交易</option>
+                        </select>
+                        <select id="sectorTag" class="p-3 border rounded-lg dark:bg-gray-700">
+                            <option value="">板塊標籤</option><option value="科技">科技</option><option value="金融">金融</option>
+                        </select>
+                    </div>
+                    <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-700 text-sm space-y-1">
+                        <p>成交金額：<span id="amtVal">0.00</span></p>
+                        <p>總手續費：<span id="feeVal">0.00</span></p>
+                        <p>毛利：<span id="grossVal">0.00</span></p>
+                        <p class="font-bold">淨盈虧：<span id="netVal">0.00</span></p>
+                    </div>
+                    <textarea id="note" rows="3" placeholder="備註" class="w-full p-3 border rounded-lg dark:bg-gray-700"></textarea>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="submitTrade()" class="w-full bg-primary text-white p-3 rounded-lg mt-2">保存</button>
+                        <button onclick="resetForm()" class="w-full bg-gray-400 text-white p-3 rounded-lg mt-2">重置</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 列表 -->
+        <div id="tradeListPage" class="page-content page-hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">交易記錄列表</h3>
+                    <button onclick="exportToExcel()" class="bg-green-500 text-white px-4 py-2 rounded-lg text-sm">匯出 Excel</button>
+                </div>
+                <div id="tradeListContainer" class="space-y-3">
+                    <p class="text-gray-500">暫無交易記錄</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 手續費設定 -->
+        <div id="feeSettingPage" class="page-content page-hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
+                <h3 class="text-xl font-bold mb-4">券商手續費設定</h3>
+                <select id="brokerTemplateSet" class="w-full p-3 border rounded-lg dark:bg-gray-700 mb-4">
+                    <option value="default">系統預設</option><option value="futu">富途</option><option value="tiger">老虎</option><option value="bridge">長橋</option><option value="hsbc">滙豐</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 個人設定 -->
+        <div id="profilePage" class="page-content page-hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow space-y-4">
+                <h3 class="text-xl font-bold mb-4">個人設定</h3>
+                <button onclick="signOut()" class="w-full bg-red-500 text-white p-3 rounded-lg">登出帳號</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-    // ========== 1. Supabase 初始化（改成你自己的） ==========
+    // ========== 你一定要替換這兩個 ==========
     const SUPABASE_URL = "https://mjwfjwztdtfqttbedvzp.supabase.co/rest/v1/";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qd2Zqd3p0ZHRmcXR0YmVkdnpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4MDcyMTUsImV4cCI6MjA5NDM4MzIxNX0.JuRYm6xuGzoLOFJutE9txNa3ASFBjJTc8RxWcZgArGg";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // ========== 2. 券商費率模板庫 ==========
+    // 費率模板
     const feeTemplate = {
-        default: {
-            HK: { commission: 0.0008, levy: 0.000027, exchangeFee: 0.5, stamp: 0.0013, platform: 2 },
-            US: { commission: 0, regFee: 0.000166, clearFee: 0.000278, platform: 0.5 }
-        },
-        futu: {
-            HK: { commission: 0, levy: 0.000027, exchangeFee: 0.5, stamp: 0.0013, platform: 0 },
-            US: { commission: 0, regFee: 0.000166, clearFee: 0.000278, platform: 0 }
-        },
-        tiger: {
-            HK: { commission: 0, levy: 0.000027, exchangeFee: 0.5, stamp: 0.0013, platform: 0 },
-            US: { commission: 0, regFee: 0.000166, clearFee: 0.000278, platform: 0 }
-        },
-        bridge: {
-            HK: { commission: 0, levy: 0.000027, exchangeFee: 0.5, stamp: 0.0013, platform: 1 },
-            US: { commission: 0, regFee: 0.000166, clearFee: 0.000278, platform: 0.3 }
-        },
-        hsbc: {
-            HK: { commission: 0.0015, levy: 0.000027, exchangeFee: 0.5, stamp: 0.0013, platform: 0 },
-            US: { commission: 0.002, regFee: 0.000166, clearFee: 0.000278, platform: 1 }
-        }
+        default:{HK:{commission:0.0008,levy:0.000027,exchangeFee:0.5,stamp:0.0013,platform:2},US:{commission:0,regFee:0.000166,clearFee:0.000278,platform:0.5}},
+        futu:{HK:{commission:0,levy:0.000027,exchangeFee:0.5,stamp:0.0013,platform:0},US:{commission:0,regFee:0.000166,clearFee:0.000278,platform:0}},
+        tiger:{HK:{commission:0,levy:0.000027,exchangeFee:0.5,stamp:0.0013,platform:0},US:{commission:0,regFee:0.000166,clearFee:0.000278,platform:0}},
+        bridge:{HK:{commission:0,levy:0.000027,exchangeFee:0.5,stamp:0.0013,platform:1},US:{commission:0,regFee:0.000166,clearFee:0.000278,platform:0.3}},
+        hsbc:{HK:{commission:0.0015,levy:0.000027,exchangeFee:0.5,stamp:0.0013,platform:0},US:{commission:0.002,regFee:0.000166,clearFee:0.000278,platform:1}}
     };
 
-    // 全域緩存當前用戶所有記錄，用於匯出
     let allTradeData = [];
 
-    // ========== 3. 實時計算核心函數 ==========
+    // 實時計算
     function calcProfit(){
         const market = document.getElementById('marketType').value;
         const broker = document.getElementById('brokerTemplate').value;
         const dir = document.getElementById('direction').value;
-        const entry = parseFloat(document.getElementById('entryPrice').value) || 0;
-        const exit = parseFloat(document.getElementById('exitPrice').value) || 0;
-        const qty = parseInt(document.getElementById('quantity').value) || 0;
-
+        const entry = parseFloat(document.getElementById('entryPrice').value)||0;
+        const exit = parseFloat(document.getElementById('exitPrice').value)||0;
+        const qty = parseInt(document.getElementById('quantity').value)||0;
         const tpl = feeTemplate[broker][market];
-        let amt = 0, totalFee = 0, gross = 0, net = 0;
-
-        if(market === 'HK'){
-            amt = exit * qty;
-            let comm = amt * tpl.commission;
-            let levy = amt * tpl.levy;
-            let exFee = tpl.exchangeFee;
-            let stamp = dir === '賣出' ? amt * tpl.stamp : 0;
-            let plat = tpl.platform;
-            totalFee = comm + levy + exFee + stamp + plat;
+        let amt=0, totalFee=0, gross=0, net=0;
+        if(market==='HK'){
+            amt=exit*qty;
+            let comm=amt*tpl.commission;
+            let levy=amt*tpl.levy;
+            let exFee=tpl.exchangeFee;
+            let stamp=dir==='賣出'?amt*tpl.stamp:0;
+            let plat=tpl.platform;
+            totalFee=comm+levy+exFee+stamp+plat;
         }else{
-            amt = exit * qty;
-            let comm = amt * tpl.commission;
-            let reg = dir === '賣出' ? qty * tpl.regFee : 0;
-            let clear = dir === '賣出' ? amt * tpl.clearFee : 0;
-            let plat = tpl.platform;
-            totalFee = comm + reg + clear + plat;
+            amt=exit*qty;
+            let comm=amt*tpl.commission;
+            let reg=dir==='賣出'?qty*tpl.regFee:0;
+            let clear=dir==='賣出'?amt*tpl.clearFee:0;
+            let plat=tpl.platform;
+            totalFee=comm+reg+clear+plat;
         }
-
-        gross = (exit - entry) * qty;
-        net = gross - totalFee;
-
-        document.getElementById('amtVal').textContent = amt.toFixed(2);
-        document.getElementById('feeVal').textContent = totalFee.toFixed(2);
-        document.getElementById('grossVal').textContent = gross.toFixed(2);
-        document.getElementById('netVal').textContent = net.toFixed(2);
+        gross=(exit-entry)*qty;
+        net=gross-totalFee;
+        document.getElementById('amtVal').textContent=amt.toFixed(2);
+        document.getElementById('feeVal').textContent=totalFee.toFixed(2);
+        document.getElementById('grossVal').textContent=gross.toFixed(2);
+        document.getElementById('netVal').textContent=net.toFixed(2);
     }
 
-    // 綁定輸入事件
-    ['marketType','brokerTemplate','direction','entryPrice','exitPrice','quantity']
-    .forEach(id=>{
-        document.getElementById(id).addEventListener('input', calcProfit);
-        document.getElementById(id).addEventListener('change', calcProfit);
+    ['marketType','brokerTemplate','direction','entryPrice','exitPrice','quantity'].forEach(id=>{
+        document.getElementById(id).addEventListener('input',calcProfit);
+        document.getElementById(id).addEventListener('change',calcProfit);
     });
 
-    // ========== 4. 頁面切換 ==========
-    const pageMap = {
-        dashboard: 'dashboardPage',
-        addTrade: 'addTradePage',
-        tradeList: 'tradeListPage',
-        feeSetting: 'feeSettingPage',
-        profile: 'profilePage'
-    };
-
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', function(){
+    // 頁面切換
+    const pageMap = {dashboard:'dashboardPage',addTrade:'addTradePage',tradeList:'tradeListPage',feeSetting:'feeSettingPage',profile:'profilePage'};
+    document.querySelectorAll('.nav-item').forEach(item=>{
+        item.addEventListener('click',function(){
             document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('nav-active'));
             document.querySelectorAll('.page-content').forEach(p=>p.classList.add('page-hidden'));
             this.classList.add('nav-active');
-            const target = this.dataset.page;
-            document.getElementById(pageMap[target]).classList.remove('page-hidden');
-
-            if(target === 'tradeList') loadTradeList();
-            if(target === 'dashboard') loadDashboardData();
-            if(target === 'addTrade') resetForm();
+            const t = this.dataset.page;
+            document.getElementById(pageMap[t]).classList.remove('page-hidden');
+            if(t==='tradeList')loadTradeList();
+            if(t==='dashboard')loadDashboardData();
+            if(t==='addTrade')resetForm();
         });
     });
 
-    // ========== 5. 登入註冊 ==========
+    // ========== 登入 & 註冊 已修復 ==========
     async function signIn(){
         const email = document.getElementById('email').value;
         const pwd = document.getElementById('pwd').value;
-        const {data,error} = await supabase.auth.signInWithPassword({email,pwd});
-        if(error) return alert("登入失敗：" + error.message);
+        const {data,error} = await supabase.auth.signInWithPassword({email,password:pwd});
+        if(error)return alert("登入失敗："+error.message);
         document.getElementById('authPage').classList.add('page-hidden');
         document.getElementById('mainApp').classList.remove('page-hidden');
-        loadTradeList();
-        loadDashboardData();
+        loadTradeList(); loadDashboardData();
     }
 
     async function signUp(){
         const email = document.getElementById('email').value;
         const pwd = document.getElementById('pwd').value;
-        const {data,error} = await supabase.auth.signUp({email,pwd});
-        if(error) return alert("註冊失敗：" + error.message);
-        alert("註冊成功，請去信箱驗證後登入");
+        if(!email || !pwd){return alert("請輸入Email和密碼");}
+        const {data,error} = await supabase.auth.signUp({email,password:pwd});
+        if(error){return alert("註冊失敗："+error.message);}
+        alert("註冊成功！請前往郵箱驗證後登入");
     }
 
     async function signOut(){
@@ -345,107 +265,85 @@
         document.getElementById('mainApp').classList.add('page-hidden');
     }
 
-    // ========== 6. 重置表單 ==========
+    // 表單
     function resetForm(){
-        document.getElementById('editId').value = '';
-        document.getElementById('formTitle').innerText = '新增交易記錄';
-        document.getElementById('tradeDate').valueAsDate = new Date();
-        document.getElementById('tradeTime').value = '';
-        document.getElementById('stockCode').value = '';
-        document.getElementById('stockName').value = '';
-        document.getElementById('entryPrice').value = '';
-        document.getElementById('exitPrice').value = '';
-        document.getElementById('quantity').value = '';
-        document.getElementById('strategyTag').value = '';
-        document.getElementById('emotionTag').value = '';
-        document.getElementById('sectorTag').value = '';
-        document.getElementById('note').value = '';
+        document.getElementById('editId').value='';
+        document.getElementById('formTitle').innerText='新增交易記錄';
+        document.getElementById('tradeDate').valueAsDate=new Date();
+        document.getElementById('tradeTime').value='';
+        document.getElementById('stockCode').value='';
+        document.getElementById('stockName').value='';
+        document.getElementById('entryPrice').value='';
+        document.getElementById('exitPrice').value='';
+        document.getElementById('quantity').value='';
+        document.getElementById('strategyTag').value='';
+        document.getElementById('emotionTag').value='';
+        document.getElementById('sectorTag').value='';
+        document.getElementById('note').value='';
         calcProfit();
     }
 
-    // ========== 7. 新增 / 編輯 提交 ==========
+    // 提交
     async function submitTrade(){
         const user = await supabase.auth.getUser();
-        if(!user.data.user) return alert("請先登入");
-
+        if(!user.data.user){alert("請先登入");return;}
+        const uid = user.data.user.id;
         let net = parseFloat(document.getElementById('netVal').textContent);
         let fee = parseFloat(document.getElementById('feeVal').textContent);
         let gross = parseFloat(document.getElementById('grossVal').textContent);
         const editId = document.getElementById('editId').value;
-
         const record = {
-            market_type: document.getElementById('marketType').value,
-            trade_date: document.getElementById('tradeDate').value,
-            trade_time: document.getElementById('tradeTime').value,
-            stock_code: document.getElementById('stockCode').value,
-            stock_name: document.getElementById('stockName').value,
-            direction: document.getElementById('direction').value,
-            position_type: document.getElementById('positionType').value,
-            entry_price: parseFloat(document.getElementById('entryPrice').value)||0,
-            exit_price: parseFloat(document.getElementById('exitPrice').value)||0,
-            quantity: parseInt(document.getElementById('quantity').value)||0,
-            fee_total: fee,
-            gross_profit: gross,
-            net_profit: net,
-            strategy_tag: document.getElementById('strategyTag').value,
-            emotion_tag: document.getElementById('emotionTag').value,
-            sector_tag: document.getElementById('sectorTag').value,
-            rr_ratio: 0,
-            note: document.getElementById('note').value
+            market_type:document.getElementById('marketType').value,
+            trade_date:document.getElementById('tradeDate').value,
+            trade_time:document.getElementById('tradeTime').value,
+            stock_code:document.getElementById('stockCode').value,
+            stock_name:document.getElementById('stockName').value,
+            direction:document.getElementById('direction').value,
+            position_type:document.getElementById('positionType').value,
+            entry_price:parseFloat(document.getElementById('entryPrice').value)||0,
+            exit_price:parseFloat(document.getElementById('exitPrice').value)||0,
+            quantity:parseInt(document.getElementById('quantity').value)||0,
+            fee_total:fee,
+            gross_profit:gross,
+            net_profit:net,
+            strategy_tag:document.getElementById('strategyTag').value,
+            emotion_tag:document.getElementById('emotionTag').value,
+            sector_tag:document.getElementById('sectorTag').value,
+            note:document.getElementById('note').value
         };
-
-        let error;
         if(editId){
-            const {err} = await supabase
-                .from('trade_records')
-                .update(record)
-                .eq('id', editId);
-            error = err;
-            if(!error) alert("記錄已更新！");
+            const {error} = await supabase.from('trade_records').update(record).eq('id',editId);
+            if(error){alert("更新失敗："+error.message);return;}
+            alert("更新成功");
         }else{
-            record.user_id = user.id;
-            const {err} = await supabase
-                .from('trade_records')
-                .insert([record]);
-            error = err;
-            if(!error) alert("交易記錄保存成功！");
+            record.user_id = uid;
+            const {error} = await supabase.from('trade_records').insert([record]);
+            if(error){alert("儲存失敗："+error.message);return;}
+            alert("儲存成功");
         }
-
-        if(error){
-            alert("操作失敗："+error.message);
-            return;
-        }
-        resetForm();
-        loadTradeList();
-        loadDashboardData();
+        resetForm(); loadTradeList(); loadDashboardData();
     }
 
-    // ========== 8. 編輯單條記錄 ==========
+    // 編輯
     async function editRecord(id){
-        const {data,error} = await supabase
-            .from('trade_records')
-            .select('*')
-            .eq('id',id)
-            .single();
-        if(error) return alert("讀取失敗");
-
-        document.getElementById('editId').value = data.id;
-        document.getElementById('formTitle').innerText = '編輯交易記錄';
-        document.getElementById('marketType').value = data.market_type;
-        document.getElementById('tradeDate').value = data.trade_date;
-        document.getElementById('tradeTime').value = data.trade_time;
-        document.getElementById('stockCode').value = data.stock_code;
-        document.getElementById('stockName').value = data.stock_name;
-        document.getElementById('direction').value = data.direction;
-        document.getElementById('positionType').value = data.position_type;
-        document.getElementById('entryPrice').value = data.entry_price;
-        document.getElementById('exitPrice').value = data.exit_price;
-        document.getElementById('quantity').value = data.quantity;
-        document.getElementById('strategyTag').value = data.strategy_tag || '';
-        document.getElementById('emotionTag').value = data.emotion_tag || '';
-        document.getElementById('sectorTag').value = data.sector_tag || '';
-        document.getElementById('note').value = data.note || '';
-
+        const {data,error} = await supabase.from('trade_records').select('*').eq('id',id).single();
+        if(error){alert("讀取失敗");return;}
+        document.getElementById('editId').value=data.id;
+        document.getElementById('formTitle').innerText='編輯交易記錄';
+        document.getElementById('marketType').value=data.market_type;
+        document.getElementById('tradeDate').value=data.trade_date;
+        document.getElementById('tradeTime').value=data.trade_time;
+        document.getElementById('stockCode').value=data.stock_code;
+        document.getElementById('stockName').value=data.stock_name;
+        document.getElementById('direction').value=data.direction;
+        document.getElementById('positionType').value=data.position_type;
+        document.getElementById('entryPrice').value=data.entry_price;
+        document.getElementById('exitPrice').value=data.exit_price;
+        document.getElementById('quantity').value=data.quantity;
+        document.getElementById('strategyTag').value=data.strategy_tag||'';
+        document.getElementById('emotionTag').value=data.emotion_tag||'';
+        document.getElementById('sectorTag').value=data.sector_tag||'';
+        document.getElementById('note').value=data.note||'';
         calcProfit();
         document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('nav-active'));
         document.querySelector('[data-page="addTrade"]').classList.add('nav-active');
@@ -453,147 +351,104 @@
         document.getElementById('addTradePage').classList.remove('page-hidden');
     }
 
-    // ========== 9. 刪除單條記錄 ==========
+    // 刪除
     async function deleteRecord(id){
-        if(!confirm("確定要刪除這條記錄？無法復原！")) return;
-        const {error} = await supabase
-            .from('trade_records')
-            .delete()
-            .eq('id',id);
-        if(error) return alert("刪除失敗");
+        if(!confirm("確定刪除？"))return;
+        const {error} = await supabase.from('trade_records').delete().eq('id',id);
+        if(error){alert("刪除失敗");return;}
         alert("已刪除");
-        loadTradeList();
-        loadDashboardData();
+        loadTradeList(); loadDashboardData();
     }
 
-    // ========== 10. 載入交易記錄列表 ==========
+    // 列表
     async function loadTradeList(){
-        const user = await supabase.auth.getUser();
-        if(!user.data.user) return;
-
-        const {data,error} = await supabase
-            .from('trade_records')
-            .select("*")
-            .order("trade_date", {ascending: false})
-            .order("trade_time", {ascending: false});
-
-        // 緩存給匯出Excel用
-        allTradeData = data || [];
-
-        const container = document.getElementById('tradeListContainer');
-        if(error || data.length === 0){
-            container.innerHTML = '<p class="text-gray-500">暫無交易記錄</p>';
-            return;
-        }
-
-        let html = '';
+        const {data,error} = await supabase.from('trade_records').select('*').order('trade_date',{ascending:false}).order('trade_time',{ascending:false});
+        allTradeData = data||[];
+        const c = document.getElementById('tradeListContainer');
+        if(error||!data||data.length===0){c.innerHTML='<p class="text-gray-500">暫無記錄</p>';return;}
+        let html='';
         data.forEach(item=>{
-            let colorClass = item.net_profit >= 0 ? 'text-profit' : 'text-loss';
-            html += `
+            const cc = item.net_profit>=0?'text-profit':'text-loss';
+            html+=`
             <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
                 <div class="flex justify-between items-center">
                     <span class="font-bold">${item.stock_code} ${item.stock_name}</span>
-                    <span class="${colorClass} font-bold">${item.net_profit.toFixed(2)}</span>
+                    <span class="${cc} font-bold">${item.net_profit.toFixed(2)}</span>
                 </div>
-                <div class="text-sm text-gray-500 mt-1">
-                    ${item.market_type === 'HK' ? '港股' : '美股'} 
-                    | ${item.direction} | ${item.position_type} 
-                    | ${item.trade_date} ${item.trade_time}
+                <div class="text-sm text-gray-500">
+                    ${item.market_type==='HK'?'港股':'美股'} | ${item.direction} | ${item.trade_date} ${item.trade_time}
                 </div>
-                <div class="text-sm mt-1">
-                    策略：${item.strategy_tag || '-'} 
-                    | 情緒：${item.emotion_tag || '-'} 
-                    | 板塊：${item.sector_tag || '-'}
+                <div class="text-sm">
+                    策略：${item.strategy_tag||'-'} | 情緒：${item.emotion_tag||'-'} | 板塊：${item.sector_tag||'-'}
                 </div>
                 <div class="flex gap-3 mt-2">
                     <button onclick="editRecord('${item.id}')" class="text-blue-400 text-sm">編輯</button>
                     <button onclick="deleteRecord('${item.id}')" class="text-red-400 text-sm">刪除</button>
                 </div>
-            </div>
-            `;
+            </div>`;
         });
-        container.innerHTML = html;
+        c.innerHTML=html;
     }
 
-    // ========== 11. 一鍵匯出 Excel ==========
+    // 匯出 Excel
     function exportToExcel(){
-        if(allTradeData.length === 0){
-            alert("暫無交易記錄可匯出");
-            return;
-        }
-        // 整理匯出欄位
-        const exportArr = allTradeData.map(item => ({
-            "市場": item.market_type === "HK" ? "港股" : "美股",
-            "日期": item.trade_date,
-            "時間": item.trade_time,
-            "股票代碼": item.stock_code,
-            "股票名稱": item.stock_name,
-            "方向": item.direction,
-            "持倉動作": item.position_type,
-            "入場價": item.entry_price,
-            "離場價": item.exit_price,
-            "股數/手數": item.quantity,
-            "手續費": item.fee_total,
-            "毛利": item.gross_profit,
-            "淨盈虧": item.net_profit,
-            "策略標籤": item.strategy_tag || "",
-            "情緒標籤": item.emotion_tag || "",
-            "板塊標籤": item.sector_tag || "",
-            "備註": item.note || ""
+        if(!allTradeData||allTradeData.length===0){alert("無資料");return;}
+        const exp = allTradeData.map(i=>({
+            "市場":i.market_type==="HK"?"港股":"美股",
+            "日期":i.trade_date,
+            "時間":i.trade_time,
+            "股票代碼":i.stock_code,
+            "股票名稱":i.stock_name,
+            "方向":i.direction,
+            "動作":i.position_type,
+            "入場價":i.entry_price,
+            "離場價":i.exit_price,
+            "股數":i.quantity,
+            "手續費":i.fee_total,
+            "毛利":i.gross_profit,
+            "淨盈虧":i.net_profit,
+            "策略":i.strategy_tag,
+            "情緒":i.emotion_tag,
+            "板塊":i.sector_tag,
+            "備註":i.note
         }));
-
-        const ws = XLSX.utils.json_to_sheet(exportArr);
+        const ws = XLSX.utils.json_to_sheet(exp);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "交易記錄");
-        XLSX.writeFile(wb, "港美股交易記錄.xlsx");
+        XLSX.utils.book_append_sheet(wb,ws,"交易記錄");
+        XLSX.writeFile(wb,"港美股交易記錄.xlsx");
     }
 
-    // ========== 12. 儀表板自動統計 ==========
+    // 儀表板
     async function loadDashboardData(){
-        const user = await supabase.auth.getUser();
-        if(!user.data.user) return;
-
         const now = new Date();
-        const today = now.toISOString().split("T")[0];
-        const month = now.getMonth() + 1;
+        const today = now.toISOString().split('T')[0];
+        const month = now.getMonth()+1;
         const year = now.getFullYear();
         const monthStart = `${year}-${String(month).padStart(2,'0')}-01`;
-
-        const {data,error} = await supabase
-            .from('trade_records')
-            .select("*")
-            .gte("trade_date", monthStart);
-
-        if(error || data.length === 0){
-            document.getElementById('todayNet').textContent = "$0.00";
-            document.getElementById('monthNet').textContent = "$0.00";
-            document.getElementById('todayCount').textContent = "0";
-            document.getElementById('winRate').textContent = "0%";
+        const {data,error} = await supabase.from('trade_records').select('*').gte('trade_date',monthStart);
+        if(error||!data||data.length===0){
+            document.getElementById('todayNet').textContent="$0.00";
+            document.getElementById('monthNet').textContent="$0.00";
+            document.getElementById('todayCount').textContent="0";
+            document.getElementById('winRate').textContent="0%";
             return;
         }
-
-        const todayList = data.filter(x=>x.trade_date === today);
-        const todayNet = todayList.reduce((sum,item)=>sum + item.net_profit, 0);
-        const todayCount = todayList.length;
-        const monthNet = data.reduce((sum,item)=>sum + item.net_profit, 0);
-        const winCount = todayList.filter(x=>x.net_profit > 0).length;
-        const winRate = todayCount > 0 ? Math.round(winCount / todayCount * 100) : 0;
-
-        setDashText('todayNet', todayNet);
-        setDashText('monthNet', monthNet);
-        document.getElementById('todayCount').textContent = todayCount;
-        document.getElementById('winRate').textContent = winRate + "%";
+        const todayList = data.filter(x=>x.trade_date===today);
+        const todayNet = todayList.reduce((s,i)=>s+i.net_profit,0);
+        const todayCnt = todayList.length;
+        const monthNet = data.reduce((s,i)=>s+i.net_profit,0);
+        const winCnt = todayList.filter(x=>x.net_profit>0).length;
+        const winRate = todayCnt>0 ? Math.round(winCnt/todayCnt*100) : 0;
+        document.getElementById('todayNet').textContent="$"+todayNet.toFixed(2);
+        document.getElementById('todayNet').className = todayNet>=0?"text-2xl font-bold text-profit":"text-2xl font-bold text-loss";
+        document.getElementById('monthNet').textContent="$"+monthNet.toFixed(2);
+        document.getElementById('monthNet').className = monthNet>=0?"text-2xl font-bold text-profit":"text-2xl font-bold text-loss";
+        document.getElementById('todayCount').textContent=todayCnt;
+        document.getElementById('winRate').textContent=winRate+"%";
     }
 
-    function setDashText(id, val){
-        const el = document.getElementById(id);
-        el.textContent = "$" + val.toFixed(2);
-        el.className = val >= 0 ? 'text-2xl font-bold text-profit' : 'text-2xl font-bold text-loss';
-    }
-
-    // 初始化預設日期為今日
+    // 初始化
     document.getElementById('tradeDate').valueAsDate = new Date();
 </script>
-
 </body>
 </html>
